@@ -1,0 +1,6 @@
+/bin/
+.idea/
+node_modules/
+web/assets/vendor/
+web/assets/app.css
+web/assets/app.js
