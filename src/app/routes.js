@@ -9,9 +9,16 @@ angular.module('app')
         url: '/',
         templateUrl: 'templates/index.html',
         controller: function ($scope, Restangular){
-          Restangular.one('users', 1).get().then(function (resp){
-            console.log(resp);
-          });
+          $scope.click = function (){
+            Restangular.all('users').post({
+              firstName: 'Cosmin',
+              lastName: 'H',
+              email:'cosmin.harangus@gmail.com',
+              password: 'secret'
+            }).then(function (resp){
+              console.log(resp);
+            });
+          }
         }
       });
   });

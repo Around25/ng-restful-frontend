@@ -1,19 +1,28 @@
 angular.module('app.common')
-  /**
-   * Dummy configuration for the Rest server
-   * @todo Replace this with something that can be used in production
-   */
-  .factory('RestServerConfig', function (){
-    return {
-      apiUri: 'http://127.0.0.1:8000/api/',
-      tokenUrl: 'http://127.0.0.1:8000/oauth/v2/token',
-      clientId: '1_26o6ulfxcysk08s4scks44w0ksc0goc000wo404gkcskgw4s84',
-      clientSecret: '9j9xz7l1jv48kgcw8ogw0wcg4ks440408k44kg4cgs04000ks',
+  .provider('RestServerConfig', function (){
+    var defaults = {
+      baseUrl: '',
+      apiPath: '/api',
+      tokenPath: '/oauth/v2/token',
+      clientId: '',
+      clientSecret: '',
       grantType: 'password',
       loginState: 'login'
     };
+
+    this.setConfig = function (config){
+      this.config = angular.extend({}, defaults, config);
+      this.config.apiUrl = this.config.baseUrl + this.config.apiPath;
+      this.config.tokenUrl = this.config.baseUrl + this.config.tokenPath;
+    };
+
+    this.setConfig({});
+
+    this.$get = function () {
+      return this.config
+    };
   })
-  .factory('AccessToken', function($http, RestServerConfig){
+  .factory('AccessToken', function ($http, RestServerConfig) {
     /**
      * Access Token class
      * - keeps
@@ -60,7 +69,7 @@ angular.module('app.common')
        * Refresh the access token and update it with the new values from the server
        * @returns {*}
        */
-      refresh: function (){
+      refresh: function () {
         var self = this, params = {
           client_id: RestServerConfig.clientId,
           client_secret: RestServerConfig.clientSecret,
@@ -74,8 +83,8 @@ angular.module('app.common')
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
           }
-        }).then(function (resp){
-          if (resp.data.access_token){
+        }).then(function (resp) {
+          if (resp.data.access_token) {
             self.update(resp.data.access_token, resp.data.expires_in, resp.data.token_type, resp.data.scope, resp.data.refresh_token);
           }
         });
@@ -84,7 +93,6 @@ angular.module('app.common')
 
     return AccessToken;
   })
-
   .factory('RestServer', function (AccessToken, $q, $http, $state, RestServerConfig) {
     /**
      * An auth api interface to the OAuth server
@@ -102,7 +110,7 @@ angular.module('app.common')
        * @param password
        * @returns {promise|getDeferred.promise|fd.g.promise|result.promise|CodeUnit.promise|qFactory.Deferred.promise}
        */
-      login: function (username, password){
+      login: function (username, password) {
         var defer = $q.defer();
         var self = this,
           params = {
@@ -112,44 +120,36 @@ angular.module('app.common')
             username: username,
             password: password
           };
-        $http(
-          {
-            method: 'GET',
-            url: RestServerConfig.tokenUrl,
-            params: params,
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-            }
-          }).then(function (resp){
-            if (resp.data.error){
-              return defer.reject(resp.data);
-            }
-            self.accessToken = new AccessToken(resp.data.access_token, resp.data.expires_in, resp.data.token_type, resp.data.scope, resp.data.refresh_token);
-            defer.resolve(self.accessToken);
-          });
+        $http.post(RestServerConfig.tokenUrl, params).then(function (resp) {
+          if (resp.data.error) {
+            return defer.reject(resp.data);
+          }
+          self.accessToken = new AccessToken(resp.data.access_token, resp.data.expires_in, resp.data.token_type, resp.data.scope, resp.data.refresh_token);
+          defer.resolve(self.accessToken);
+        });
         return defer.promise;
       },
       /**
        * Go to the login page
        * @returns {promise}
        */
-      gotoLoginState: function(){
+      gotoLoginState: function () {
         return $state.go(RestServerConfig.loginState);
       },
       /**
        * Logout
        */
-      logout: function (){
+      logout: function () {
         this.accessToken = null;
       },
       /**
        * Refresh the auth token if needed
        * @returns {*}
        */
-      refreshToken: function (){
+      refreshToken: function () {
         var self = this;
-        return this.accessToken.refresh().then(function (resp){
-          if (resp.error || !resp.access_token){
+        return this.accessToken.refresh().then(function (resp) {
+          if (resp.error || !resp.access_token) {
             self.gotoLoginState();
             return false;
           }
@@ -159,7 +159,7 @@ angular.module('app.common')
        * Check if the auth is expired
        * @returns {boolean|*}
        */
-      isExpired: function (){
+      isExpired: function () {
         return !this.isLoggedIn() || this.accessToken.isExpired();
       },
       /**
@@ -173,45 +173,34 @@ angular.module('app.common')
 
     return new RestServer();
   })
-  .factory('OAuthHttpInterceptor', function ($injector, $q, RestServerConfig){
+  .factory('OAuthHttpInterceptor', function ($injector, $q, RestServerConfig) {
     return {
       request: function (config) {
-        if (config.url.indexOf(RestServerConfig.apiUri)!==0){
+        if (config.url.indexOf(RestServerConfig.apiUrl) !== 0) {
           return config;
         }
         var RestServer = $injector.get('RestServer');
-        console.log(RestServer.isLoggedIn(), config);
-        if (RestServer.isLoggedIn()){
-          config.headers.Authorization = 'Bearer '+ RestServer.accessToken.accessToken;
+        if (RestServer.isLoggedIn()) {
+          config.headers.Authorization = 'Bearer ' + RestServer.accessToken.accessToken;
         }
-        console.log('After: ', config, RestServer);
         return config;
       },
-
-//      requestError: function (rejection) {
-//        return $q.reject(rejection);
-//      },
-//
-//      response: function (response) {
-//        return response;
-//      },
-
       responseError: function (rejection) {
         var RestServer = $injector.get('RestServer');
-        if (!RestServer.isLoggedIn() && rejection.status==401){
+        if (!RestServer.isLoggedIn() && rejection.status == 401) {
           RestServer.gotoLoginState();
         }
-        if (RestServer.isLoggedIn() && rejection.status==401){
+        if (RestServer.isLoggedIn() && rejection.status == 401) {
           var deferred = $q.defer();
-          RestServer.refreshToken().then(function (resp){
-            if (resp.error){
+          RestServer.refreshToken().then(function (resp) {
+            if (resp.error) {
               deferred.reject(rejection);
               RestServer.gotoLoginState();
               return;
             }
             var config = rejection.config,
-                $http = $injector.get('$http');
-            config.headers.Authorization = 'Bearer '+ RestServer.accessToken.accessToken;
+              $http = $injector.get('$http');
+            config.headers.Authorization = 'Bearer ' + RestServer.accessToken.accessToken;
             deferred.resolve($http(config));
           });
           return deferred.promise;
@@ -220,4 +209,3 @@ angular.module('app.common')
       }
     };
   });
-;
