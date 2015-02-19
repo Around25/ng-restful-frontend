@@ -59,13 +59,6 @@ angular.module('app.common')
         this.refreshToken = refresh_token;
       },
       /**
-       * Check if the access token has expired
-       * @returns {*}
-       */
-      isExpired: function () {
-        return moment().isBefore(this.expiresAt);
-      },
-      /**
        * Refresh the access token and update it with the new values from the server
        * @returns {*}
        */
@@ -76,14 +69,7 @@ angular.module('app.common')
           grant_type: 'refresh_token',
           refresh_token: this.refreshToken
         };
-        return $http.post({
-          method: 'GET',
-          url: RestServerConfig.tokenUrl,
-          params: params,
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-          }
-        }).then(function (resp) {
+        return $http.post(RestServerConfig.tokenUrl, params).then(function (resp) {
           if (resp.data.access_token) {
             self.update(resp.data.access_token, resp.data.expires_in, resp.data.token_type, resp.data.scope, resp.data.refresh_token);
           }
@@ -154,13 +140,6 @@ angular.module('app.common')
             return false;
           }
         });
-      },
-      /**
-       * Check if the auth is expired
-       * @returns {boolean|*}
-       */
-      isExpired: function () {
-        return !this.isLoggedIn() || this.accessToken.isExpired();
       },
       /**
        * Check if the user is logged in
