@@ -19,7 +19,9 @@ angular.module('app')
     RestServerConfigProvider.setConfig({
       baseUrl: 'http://127.0.0.1:8000',
       clientId: '1_26o6ulfxcysk08s4scks44w0ksc0goc000wo404gkcskgw4s84',
-      clientSecret: '9j9xz7l1jv48kgcw8ogw0wcg4ks440408k44kg4cgs04000ks'
+      clientSecret: '9j9xz7l1jv48kgcw8ogw0wcg4ks440408k44kg4cgs04000ks',
+      loginState: 'login',
+      deniedState: 'denied'
     });
   })
 
@@ -31,11 +33,6 @@ angular.module('app')
     // set api base path
     RestangularProvider.setBaseUrl('http://127.0.0.1:8000/api');
     RestangularProvider.setRequestSuffix('.json');
-
-    // load data from the data field of the response
-//    RestangularProvider.setResponseExtractor(function(response, operation) {
-//      return response.data;
-//    });
 
     // send PUT or PATCH methods in a separate field _method
     RestangularProvider.setMethodOverriders(["put", "patch"]);

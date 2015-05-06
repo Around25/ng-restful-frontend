@@ -13,7 +13,7 @@ angular.module('app')
             Restangular.all('users').post({
               firstName: 'Cosmin',
               lastName: 'H',
-              email:'cosmin.harangus@gmail.com',
+              email:'cosmin@example.com',
               password: 'secret'
             }).then(function (resp){
               console.log(resp);
